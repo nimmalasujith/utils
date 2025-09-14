@@ -10,6 +10,56 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  telegram:
+  cloud_firestore:
+  geocoding:
+
+
+  mailer:
+  provider:
+  hive_flutter:
+  shared_preferences:
+  url_launcher:
+  firebase_messaging:
+  font_awesome_flutter:
+    #  flutter_google_places_sdk: ^0.4.2+1
+  google_sign_in:
+  flutter_google_places_hoc081098:
+  google_api_headers:
+    #  google_maps_webservice: ^0.0.20-nullsafety.5
+    #  flutter_dotenv: ^5.0.2
+  firebase_auth:
+  http:
+  flutter_slidable:
+  fluttertoast:
+
+  grouped_list:
+  lottie:
+  swipe_to:
+  path_provider:
+    #  fluttertoast:
+  google_maps_flutter:
+    #  googleapis_auth:
+  geolocator:
+  encrypt:
+  flutter_staggered_grid_view:
+  razorpay_flutter:
+  table_calendar:
+  flutter_local_notifications:
+  flutter_pdfview:
+  pointycastle:
+  permission_handler:
+
+  intl:
+  rxdart:
+  firebase_core:
+  file_picker:
+  firebase_storage:
+  open_file:
+  country_picker:
+  sms_autofill:
+  googleapis_auth:
+  lucide_icons:
 
 dev_dependencies:
   flutter_test:
