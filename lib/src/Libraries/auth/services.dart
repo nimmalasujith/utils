@@ -3,50 +3,61 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
-class GoogleAuthService {
-  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
+import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+class GoogleAuthService {
+  final List<String> _initialScopes;
+
+  GoogleAuthService({ required List<String> initialScopes })
+      : _initialScopes = initialScopes;
+
+  /// Must call once before other actions
+  Future<void> init({ String? clientId, String? serverClientId }) async {
+    await GoogleSignIn.instance.initialize(
+      clientId: clientId,             // optional, as per your setup
+      serverClientId: serverClientId, // needed on some platforms for server auth codes  [oai_citation:5‡GitHub](https://github.com/flutter/flutter/issues/172073?utm_source=chatgpt.com)
+    );
+  }
+
+  /// Interactive login
   Future<User?> signInWithGoogle({
     required BuildContext context,
     required Function(String message) onMessage,
   }) async {
     try {
-      // 1. Initialize GoogleSignIn
-      await _googleSignIn.initialize();
+      // initialize
+      await init();
 
-      // 2. Attempt silent sign-in first
+      // Try lightweight (silent) authentication first
       GoogleSignInAccount? googleUser =
-      await _googleSignIn.attemptLightweightAuthentication();
+      await GoogleSignIn.instance.attemptLightweightAuthentication();
 
-      // 3. Interactive sign-in if needed
+      // If silent didn't work, do full authenticate
       if (googleUser == null) {
-        googleUser = await _googleSignIn.authenticate();
+        googleUser = await GoogleSignIn.instance.authenticate(
+          scopeHint: _initialScopes,
+        );
       }
 
-      // 4. User cancelled
       if (googleUser == null) {
-        onMessage("Google Sign-In was cancelled.");
+        onMessage("Google Sign-In was cancelled or unable to authenticate.");
         return null;
       }
 
-      // 5. Get tokens
-      final GoogleSignInAuthentication googleAuth =
-      await googleUser.authentication;
-      final String? idToken = googleAuth.idToken;
+      final googleAuth = await googleUser.authentication;
 
-      if (idToken == null) {
-        throw Exception("Authentication failed: No ID token received.");
-      }
-
-      // 6. Create Firebase credential
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.idToken, // ✅ fixed here
-        idToken: idToken,
+        accessToken: googleAuth.idToken,
+        idToken: googleAuth.idToken,
       );
 
-      // 7. Sign in to Firebase
-      final userCredential =
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       final user = userCredential.user;
 
       if (user != null) {
@@ -54,21 +65,56 @@ class GoogleAuthService {
       }
 
       return user;
-    } on FirebaseAuthException catch (e) {
-      onMessage("Firebase Sign-In failed: ${e.message}");
-      return null;
-    } catch (error) {
-      onMessage("An unexpected error occurred: $error");
+    } catch (e) {
+      onMessage("Sign-In failed: $e");
       return null;
     }
   }
 
-  Future<void> signOut({
-    required Function(String message) onMessage,
-  }) async {
+  /// Request additional scopes after login
+  Future<GoogleSignInClientAuthorization?> requestAdditionalScopes(
+      GoogleSignInAccount user,
+      List<String> extraScopes, {
+        required Function(String message) onMessage,
+      }) async {
+    try {
+      final auth = await user.authorizationClient.authorizeScopes(extraScopes);
+      if (auth != null) {
+        onMessage("Granted extra scopes: ${extraScopes.join(', ')}");
+      } else {
+        onMessage("User declined extra scopes.");
+      }
+      return auth;
+    } catch (e) {
+      onMessage("Request additional scopes failed: $e");
+      return null;
+    }
+  }
+
+  /// Request server auth code if you need backend exchange
+  Future<GoogleSignInServerAuthorization?> requestServerAuthCode(
+      GoogleSignInAccount user,
+      List<String> scopes, {
+        required Function(String message) onMessage,
+      }) async {
+    try {
+      final serverAuth = await user.authorizationClient.authorizeServer(scopes);
+      if (serverAuth != null) {
+        onMessage("Got server auth code.");
+      } else {
+        onMessage("Server auth not granted.");
+      }
+      return serverAuth;
+    } catch (e) {
+      onMessage("Server auth request failed: $e");
+      return null;
+    }
+  }
+
+  Future<void> signOut({ required Function(String message) onMessage }) async {
     try {
       await FirebaseAuth.instance.signOut();
-      await _googleSignIn.signOut();
+      await GoogleSignIn.instance.signOut();
       onMessage("Signed out successfully!");
     } catch (e) {
       onMessage("Sign out failed: $e");

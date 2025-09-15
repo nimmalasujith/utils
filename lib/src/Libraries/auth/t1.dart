@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:utils/src/Libraries/auth/services.dart';
 
 class GoogleLoginButton extends StatefulWidget {
+  final List<String>? scopes;
   final Widget Function(bool loading) builder;
   final void Function(User user)? onLoginSuccess;
   final void Function()? onLoginCancelled;
@@ -14,6 +15,7 @@ class GoogleLoginButton extends StatefulWidget {
     Key? key,
     required this.builder,
     this.onLoginSuccess,
+    this.scopes,
     this.onLoginCancelled,
     this.onLoginFailed,
   }) : super(key: key);
@@ -24,9 +26,16 @@ class GoogleLoginButton extends StatefulWidget {
 
 class _GoogleLoginButtonState extends State<GoogleLoginButton> {
   bool _loading = false;
-  final GoogleAuthService _authService = GoogleAuthService();
+  late GoogleAuthService _authService;
 
-  void _handleLogin() async {
+  @override
+  void initState() {
+    super.initState();
+    _authService = GoogleAuthService(initialScopes: widget.scopes ?? []); // no constructor params
+
+  }
+
+  Future<void> _handleLogin() async {
     if (_loading) return;
 
     setState(() => _loading = true);
@@ -34,6 +43,8 @@ class _GoogleLoginButtonState extends State<GoogleLoginButton> {
     final user = await _authService.signInWithGoogle(
       context: context,
       onMessage: (msg) => debugPrint("GoogleAuth: $msg"),
+
+
     );
 
     if (!mounted) return;
